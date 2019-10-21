@@ -34,7 +34,6 @@ protocol DraggableCardDelegate: class {
 //Drag animation constants
 private let defaultRotationMax: CGFloat = 1.0
 private let defaultRotationAngle = CGFloat(Double.pi) / 10.0
-private let defaultScaleMin: CGFloat = 0.8
 
 private let screenSize = UIScreen.main.bounds.size
 
@@ -50,7 +49,6 @@ public class DraggableCardView: UIView, UIGestureRecognizerDelegate {
     //Drag animation constants
     public var rotationMax = defaultRotationMax
     public var rotationAngle = defaultRotationAngle
-    public var scaleMin = defaultScaleMin
     
     weak var delegate: DraggableCardDelegate? {
         didSet {
@@ -65,7 +63,6 @@ public class DraggableCardView: UIView, UIGestureRecognizerDelegate {
     
     private var panGestureRecognizer: UIPanGestureRecognizer!
     private var tapGestureRecognizer: UITapGestureRecognizer!
-    private var animationDirectionY: CGFloat = 1.0
     private var dragDistance = CGPoint.zero
     private var swipePercentageMargin: CGFloat = 0.0
 
@@ -240,20 +237,15 @@ public class DraggableCardView: UIView, UIGestureRecognizerDelegate {
             
             dragBegin = true
             
-            animationDirectionY = touchLocation.y >= frame.size.height / 2 ? -1.0 : 1.0
             layer.rasterizationScale = UIScreen.main.scale
             layer.shouldRasterize = true
             delegate?.card(cardPanBegan: self)
             
         case .changed:
             let rotationStrength = min(dragDistance.x / frame.width, rotationMax)
-            let rotationAngle = animationDirectionY * self.rotationAngle * rotationStrength
-            let scaleStrength = 1 - ((1 - scaleMin) * abs(rotationStrength))
-            let scale = max(scaleStrength, scaleMin)
+            let rotationAngle = self.rotationAngle * rotationStrength
 
-            var transform = CATransform3DIdentity
-            transform = CATransform3DScale(transform, scale, scale, 1)
-            transform = CATransform3DRotate(transform, rotationAngle, 0, 0, 1)
+            var transform = CATransform3DMakeRotation(rotationAngle, 0, 0, 1)
             transform = CATransform3DTranslate(transform, dragDistance.x, dragDistance.y, 0)
             layer.transform = transform
             

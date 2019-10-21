@@ -36,9 +36,6 @@ extension KolodaView {
         if let rotationAngle = self.rotationAngle {
             card.rotationAngle = rotationAngle
         }
-        if let scaleMin = self.scaleMin {
-            card.scaleMin = scaleMin
-        }
     }
     
 }
