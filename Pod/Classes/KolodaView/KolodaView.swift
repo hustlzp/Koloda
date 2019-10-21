@@ -99,7 +99,6 @@ open class KolodaView: UIView, DraggableCardDelegate {
     // Drag animation constants
     public var rotationMax: CGFloat?
     public var rotationAngle: CGFloat?
-    public var scaleMin: CGFloat?
 
     // Animation durations
     public var appearanceAnimationDuration = defaultAppearanceAnimationDuration
@@ -414,23 +413,21 @@ open class KolodaView: UIView, DraggableCardDelegate {
         if isLoop && currentCardIndex >= countOfCards && countOfCards > 0 {
             currentCardIndex = currentCardIndex % countOfCards
         }
+        
         let indexToBeShow = currentCardIndex + min(countOfVisibleCards, countOfCards) - 1
         let realCountOfCards = dataSource?.kolodaNumberOfCards(self) ?? countOfCards
-        if indexToBeShow < realCountOfCards
-            || (isLoop && realCountOfCards > 0 && realCountOfCards > visibleCards.count) {
-            loadNextCard()
+        let shouldLoadNextCard = indexToBeShow < realCountOfCards || (isLoop && realCountOfCards > 0 && realCountOfCards > visibleCards.count)
+        if shouldLoadNextCard {
+            self.loadNextCard()
         }
-
+        
         if !visibleCards.isEmpty {
-            animateCardsAfterLoadingWithCompletion { [weak self] in
-                guard let _self = self else {
-                    return
-                }
+            animateCardsAfterLoadingWithCompletion(didLoadNewCard: shouldLoadNextCard) { [weak self] in
+                guard let self = self else { return }
                 
-                _self.visibleCards.last?.isHidden = false
-                _self.animationSemaphore.decrement()
-                _self.delegate?.koloda(_self, didSwipeCardAt: swipedCardIndex, in: direction)
-                _self.delegate?.koloda(_self, didShowCardAt: _self.currentCardIndex)
+                self.animationSemaphore.decrement()
+                self.delegate?.koloda(self, didSwipeCardAt: swipedCardIndex, in: direction)
+                self.delegate?.koloda(self, didShowCardAt: self.currentCardIndex)
             }
         } else {
             animationSemaphore.decrement()
@@ -454,7 +451,7 @@ open class KolodaView: UIView, DraggableCardDelegate {
         
         let scale = cardParameters.scale
         lastCard.layer.transform = CATransform3DScale(CATransform3DIdentity, scale.width, scale.height, 1)
-        lastCard.isHidden = true
+        lastCard.alpha = 0
         lastCard.isUserInteractionEnabled = true
         
         if let card = visibleCards.last {
@@ -465,26 +462,34 @@ open class KolodaView: UIView, DraggableCardDelegate {
         visibleCards.append(lastCard)
     }
     
-    private func animateCardsAfterLoadingWithCompletion(_ completion: (() -> Void)? = nil) {
+    private func animateCardsAfterLoadingWithCompletion(didLoadNewCard: Bool, completion: (() -> Void)? = nil) {
         for (index, currentCard) in visibleCards.enumerated() {
             currentCard.removeAnimations()
             
             currentCard.isUserInteractionEnabled = index == 0
             let cardParameters = backgroundCardParametersForFrame(frameForCard(at: index))
             var animationCompletion: ((Bool) -> Void)? = nil
-            if index != 0 {
-                if shouldTransparentizeNextCard {
-                    currentCard.alpha = alphaValueSemiTransparent
-                }
-            } else {
+            if index == 0 { // first
                 animationCompletion = { finished in
                     completion?()
                 }
-                
+
+                animator.applyAlphaAnimation(currentCard, alpha: alphaValueOpaque)
+            } else if index == visibleCards.count - 1 { // last
                 if shouldTransparentizeNextCard {
-                    animator.applyAlphaAnimation(currentCard, alpha: alphaValueOpaque)
-                } else {
-                    currentCard.alpha = alphaValueOpaque
+                    if didLoadNewCard {
+                        // if this is the new card, apply alpha animation after scale animation
+                        animationCompletion = { [weak self] finished in
+                            guard let self = self else { return }
+                            self.animator.applyAlphaAnimation(currentCard, alpha:                     self.alphaValueSemiTransparent, duration: 0.3)
+                        }
+                    } else {
+                        animator.applyAlphaAnimation(currentCard, alpha:                     alphaValueSemiTransparent)
+                    }
+                }
+            } else {
+                if shouldTransparentizeNextCard {
+                    animator.applyAlphaAnimation(currentCard, alpha: alphaValueSemiTransparent)
                 }
             }
             
