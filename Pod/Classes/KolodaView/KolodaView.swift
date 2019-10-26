@@ -15,7 +15,7 @@ private let defaultBackgroundCardsTopMargin: CGFloat = 4.0
 private let defaultBackgroundCardsScalePercent: CGFloat = 0.95
 private let defaultBackgroundCardsLeftMargin: CGFloat = 8.0
 private let defaultBackgroundCardFrameAnimationDuration: TimeInterval = 0.2
-private let defaultAppearanceAnimationDuration: TimeInterval = 0.8
+private let defaultAppearanceAnimationDuration: TimeInterval = 0.5
 private let defaultReverseAnimationDuration: TimeInterval = 0.3
 
 // Opacity values
@@ -298,7 +298,7 @@ open class KolodaView: UIView, DraggableCardDelegate {
     
     // MARK: Animations
     
-    private func applyAppearAnimation() {
+    private func applyAppearAnimation(completion: (() -> Void)? = nil) {
         alpha = 0
         isUserInteractionEnabled = false
         animationSemaphore.increment()
@@ -306,6 +306,7 @@ open class KolodaView: UIView, DraggableCardDelegate {
             self?.isUserInteractionEnabled = true
             self?.animationSemaphore.decrement()
             self?.layoutDeck()
+            completion?()
         }
     }
     
@@ -314,6 +315,18 @@ open class KolodaView: UIView, DraggableCardDelegate {
             if let shouldApply = delegate?.kolodaShouldApplyAppearAnimation(self), shouldApply == true {
                 applyAppearAnimation()
             }
+        }
+    }
+    
+    private func applyDisappearAnimation(completion: (() -> Void)? = nil) {
+        alpha = 1
+        isUserInteractionEnabled = false
+        animationSemaphore.increment()
+        animator.animateDisappearance(appearanceAnimationDuration) { [weak self] _ in
+            self?.isUserInteractionEnabled = true
+            self?.animationSemaphore.decrement()
+            self?.layoutDeck()
+            completion?()
         }
     }
     
@@ -543,19 +556,20 @@ open class KolodaView: UIView, DraggableCardDelegate {
         }
         
         for (index, card) in visibleCards.dropFirst().enumerated() {
-            if shouldTransparentizeNextCard {
-                card.alpha = 1 - CGFloat(index + 1) * alphaValueSemiTransparentDiff
-            }
             card.isUserInteractionEnabled = false
-            
             let cardParameters = backgroundCardParametersForFrame(frameForCard(at: index + 1))
             animator.applyScaleAnimation(
                 card,
                 scale: cardParameters.scale,
                 frame: cardParameters.frame,
-                duration: backgroundCardFrameAnimationDuration,
+                duration: reverseAnimationDuration,
                 completion: nil
             )
+            
+            let alpha = 1 - CGFloat(index + 1) * alphaValueSemiTransparentDiff
+            if shouldTransparentizeNextCard {
+                animator.applyAlphaAnimation(card, alpha: alpha)
+            }
         }
     }
     
@@ -582,14 +596,14 @@ open class KolodaView: UIView, DraggableCardDelegate {
     }
     
     public func reconfigureCards() {
-        if dataSource != nil {
-            for (index, card) in visibleCards.enumerated() {
-                var actualIndex = currentCardIndex + index
-                if isLoop && actualIndex >= countOfCards {
-                    actualIndex -= countOfCards
-                }
-                configureCard(card, at: actualIndex)
+        guard dataSource != nil else { return }
+        
+        for (index, card) in visibleCards.enumerated() {
+            var actualIndex = currentCardIndex + index
+            if isLoop && actualIndex >= countOfCards {
+                actualIndex -= countOfCards
             }
+            configureCard(card, at: actualIndex)
         }
     }
     
@@ -598,6 +612,14 @@ open class KolodaView: UIView, DraggableCardDelegate {
     }
     
     // MARK: Public
+    
+    public func show(completion: (() -> Void)? = nil) {
+        applyAppearAnimation(completion: completion)
+    }
+    
+    public func hide(completion: (() -> Void)? = nil) {
+        applyDisappearAnimation(completion: completion)
+    }
     
     public func reloadData() {
         guard let numberOfCards = dataSource?.kolodaNumberOfCards(self), numberOfCards > 0 else {

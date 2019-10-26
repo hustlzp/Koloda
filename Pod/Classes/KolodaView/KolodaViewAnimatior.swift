@@ -23,9 +23,9 @@ open class KolodaViewAnimator {
     open func animateAppearance(_ duration: TimeInterval, completion: AnimationCompletionBlock = nil) {
         let kolodaAppearScaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)
         
-        kolodaAppearScaleAnimation?.beginTime = CACurrentMediaTime() + cardSwipeActionAnimationDuration
+        kolodaAppearScaleAnimation?.beginTime = CACurrentMediaTime()
         kolodaAppearScaleAnimation?.duration = duration
-        kolodaAppearScaleAnimation?.fromValue = NSValue(cgPoint: CGPoint(x: 0.1, y: 0.1))
+        kolodaAppearScaleAnimation?.fromValue = NSValue(cgPoint: CGPoint(x: 0.5, y: 0.5))
         kolodaAppearScaleAnimation?.toValue = NSValue(cgPoint: CGPoint(x: 1.0, y: 1.0))
         kolodaAppearScaleAnimation?.completionBlock = { (_, finished) in
             completion?(finished)
@@ -33,13 +33,38 @@ open class KolodaViewAnimator {
         
         let kolodaAppearAlphaAnimation = POPBasicAnimation(propertyNamed: kPOPViewAlpha)
         
-        kolodaAppearAlphaAnimation?.beginTime = CACurrentMediaTime() + cardSwipeActionAnimationDuration
+        kolodaAppearAlphaAnimation?.beginTime = CACurrentMediaTime()
         kolodaAppearAlphaAnimation?.fromValue = NSNumber(value: 0.0)
         kolodaAppearAlphaAnimation?.toValue = NSNumber(value: 1.0)
         kolodaAppearAlphaAnimation?.duration = duration
         
         koloda?.pop_add(kolodaAppearAlphaAnimation, forKey: "kolodaAppearScaleAnimation")
         koloda?.layer.pop_add(kolodaAppearScaleAnimation, forKey: "kolodaAppearAlphaAnimation")
+    }
+    
+    open func animateDisappearance (_ duration: TimeInterval, completion: AnimationCompletionBlock = nil) {
+//        let kolodaAppearScaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)
+//
+//        kolodaAppearScaleAnimation?.beginTime = CACurrentMediaTime()
+//        kolodaAppearScaleAnimation?.duration = duration
+//        kolodaAppearScaleAnimation?.fromValue = NSValue(cgPoint: CGPoint(x: 1.0, y: 1.0))
+//        kolodaAppearScaleAnimation?.toValue = NSValue(cgPoint: CGPoint(x: 0.5, y: 0.5))
+//        kolodaAppearScaleAnimation?.completionBlock = { (_, finished) in
+//            completion?(finished)
+//        }
+        
+        let kolodaAppearAlphaAnimation = POPBasicAnimation(propertyNamed: kPOPViewAlpha)
+        
+        kolodaAppearAlphaAnimation?.beginTime = CACurrentMediaTime()
+        kolodaAppearAlphaAnimation?.fromValue = NSNumber(value: 1.0)
+        kolodaAppearAlphaAnimation?.toValue = NSNumber(value: 0.0)
+        kolodaAppearAlphaAnimation?.duration = duration
+        kolodaAppearAlphaAnimation?.completionBlock = { (_, finished) in
+            completion?(finished)
+        }
+        
+        koloda?.pop_add(kolodaAppearAlphaAnimation, forKey: "kolodaDisappearScaleAnimation")
+//        koloda?.layer.pop_add(kolodaAppearScaleAnimation, forKey: "kolodaDisappearAlphaAnimation")
     }
     
     open func applyReverseAnimation(_ card: DraggableCardView, direction: SwipeResultDirection?, duration: TimeInterval, completion: AnimationCompletionBlock = nil) {
